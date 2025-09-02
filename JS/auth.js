@@ -14,6 +14,7 @@ $(document).ready(function () {
             processData: false,  // important
             success: function (response) {
                 console.log("Server response:", response);
+                window.location.href = "../home-page2.html";
                 alert("Registration successful!");
             },
             error: function (xhr, status, error) {
@@ -42,6 +43,7 @@ $(document).ready(function () {
             success: function (response) {
                 console.log("Server response:", response);
                 alert("Login successful!");
+                window.location.href = "../home-page2.html";
             },
             error: function (xhr, status, error) {
                 console.error("Error:", error);
