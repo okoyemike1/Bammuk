@@ -6,8 +6,6 @@ header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
 
 require_once "../models/model.php";
 require_once "../helpers/Utility.helper.php";
-require_once "../helpers/jwt.helper.php";
-require_once "../helpers/Mail.helper.php";
 
 /**
  * Authentication Controller class
@@ -16,7 +14,6 @@ class AuthController {
     private static $data;
     private $model;
     private $utility;
-    private $jwt;
 
     /**
      * Class Constructor
@@ -27,7 +24,6 @@ class AuthController {
         self::$data = $data;
         $this->model = new Models();
         $this->utility = new UtilityHelper();
-        $this->jwt = new JWTHelper();
     }
   
     /**
@@ -39,7 +35,7 @@ class AuthController {
     public function register():string|array
     {
       
-        $require = ["email", "password", "confirm_password", "role"];
+        $require = ["email", "password", "confirm_password"];
         $validate = $this->utility->validateFields(self::$data, $require);
         if ($validate["error"]) {
             return ['statuscode' => 401, 'status' => $validate['error_msg'], 'data' => []];
@@ -59,19 +55,10 @@ if ($data["password"] !== $data["confirm_password"]) {
 unset($data["confirm_password"]);
 
             if ($this->model->createUser($data)) {
-                // Create OTP
-                $user = $this->model->getUserByEmail($data['email']);
-                $otp = random_int(100000, 999999);
-                $expires = date('Y-m-d H:i:s', time() + 10 * 60);
-                $this->model->createOtp($user['id'], (string)$otp, $expires);
-                // Send email (best effort)
-                $subject = 'Your OTP Code';
-                $body = "<p>Your OTP is <strong>{$otp}</strong>. It expires in 10 minutes.</p>";
-                $mailOk = MailHelper::send($data['email'], '', $subject, $body);
                 $respons = $this->utility->jsonResponse(
                     200,
-                    $mailOk ? "User registered successfully. OTP sent." : "User registered. OTP email failed.",
-                    ['email' => $data['email'], 'mail_sent' => $mailOk, 'mail_error' => MailHelper::getLastError()]
+                    "User registered successfully.",
+                    $data
                 );
             } else {
                 $respons = $this->utility->jsonResponse(
@@ -101,9 +88,6 @@ unset($data["confirm_password"]);
             $result = $this->model->loginUser($data);
             if ($result["statuscode"] === 200) {
                 $user = $result["data"];
-                if ((int)($user['is_verified'] ?? 0) !== 1) {
-                    return $this->utility->jsonResponse(403, "Account not verified", []);
-                }
                 $session = $this->startSession(['user_id' => $user["id"]]);
                 if (!$session["status"]) {
                     $response = $this->utility->jsonResponse(
@@ -112,18 +96,12 @@ unset($data["confirm_password"]);
                         []
                     );
                 } else {
-                    $token = $this->jwt->createToken([
-                        'sub' => $user['id'],
-                        'email' => $user['email'],
-                        'role' => $user['role'] ?? 'Reviewer'
-                    ]);
                     $session_data = [
                         'id' => $user['id'],
                         'email' => $user['email'],
                         'session_id' => $session["data"]['session_id'],
                         'session_start_time' => $session["data"]["session_start_time"],
-                        'session_token' => $session["data"]["session_token"],
-                        'jwt' => $token
+                        'session_token' => $session["data"]["session_token"]
                     ];
                     $response = $this->utility->jsonResponse(
                         200,
@@ -140,25 +118,6 @@ unset($data["confirm_password"]);
             }
         }
         return $response;
-    }
-
-    public function verify_otp(): string|array
-    {
-        $require = ["email", "otp"];
-        $validate = $this->utility->validateFields(self::$data, $require);
-        if ($validate["error"]) {
-            return $this->utility->jsonResponse(400, "Bad request", $validate['error_msg']);
-        }
-        $data = $validate['data'];
-        $user = $this->model->getUserByEmail($data['email']);
-        if (!$user) {
-            return $this->utility->jsonResponse(404, "User not found", []);
-        }
-        $ok = $this->model->verifyOtpCode($user['id'], (string)$data['otp']);
-        if (!$ok) {
-            return $this->utility->jsonResponse(400, "Invalid or expired OTP", []);
-        }
-        return $this->utility->jsonResponse(200, "Verification successful", []);
     }
 
     /**
@@ -191,23 +150,6 @@ unset($data["confirm_password"]);
             ];
             return ['status' =>true, 'data' => $_SESSION];
         }
-    }
-
-    public function logout(): string|array
-    {
-        $require = ["session_id"];
-        $validate = $this->utility->validateFields(self::$data, $require);
-        if ($validate["error"]) {
-            return $this->utility->jsonResponse(400, "Bad request", $validate['error_msg']);
-        }
-        $sid = $validate['data']['session_id'];
-        $updated = $this->model->endSession($sid);
-        if ($updated) {
-            session_destroy();
-            $_SESSION = [];
-            return $this->utility->jsonResponse(200, "Logged out", []);
-        }
-        return $this->utility->jsonResponse(404, "Session not found", []);
     }
 
     /**

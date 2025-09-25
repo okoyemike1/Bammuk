@@ -27,7 +27,7 @@ class DBConfig
 
         $settings = [
             "db_host" => "localhost",
-            "db_name" => "book_api_v2",
+            "db_name" => "bammuk",
             "db_user" => "root",
             "db_password" => ""
         ];
@@ -55,21 +55,3 @@ class DBConfig
         }
     }
 }
-
-// SMTP/mail configuration for PHPMailer
-$smtp = [
-    'host' => 'smtp.zoho.com',
-    'port' => 465,
-    'username' => 'benrichprince1@zohomail.com',
-    'password' => 'rqLHqY7iRa1h',
-    'from_email' => 'benrichprince1@zohomail.com',
-    'from_name' => 'Benrich',
-    'encryption' => 'ssl',
-    'debug' => 2
-];
-
-// JWT configuration
-$jwt = [
-    'secret' => 'replace_with_a_long_random_secret_key',
-    'ttl_seconds' => 86400
-];

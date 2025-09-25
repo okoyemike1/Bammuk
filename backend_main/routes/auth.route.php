@@ -20,13 +20,11 @@ function authRoutes($endpoint, $data, $path)
             $response = getClassInstance($endpoint, $path, $data);
             break;
         case 'login':
+
             $response = getClassInstance($endpoint, $path."Controller", $data);
             break;
-        case 'verify-otp':
-            $response = getClassInstance('verify_otp', $path."Controller", $data);
-            break;
-        case 'logout':
-            $response = getClassInstance('logout', $path."Controller", $data);
+        case 'get_users':
+            $response = "List of All users.";
             break;
         default:
             $response = "404 Not Found";
